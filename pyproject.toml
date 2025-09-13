@@ -5,6 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "numpy>=2.3.3",
     "pydantic>=2.11.8",
     "pydantic-ai>=1.0.6",
+    "sherpa-onnx>=1.12.13",
+    "sherpa-onnx-bin>=1.12.13",
+    "sounddevice>=0.5.2",
 ]

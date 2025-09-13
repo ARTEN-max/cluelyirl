@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+import sys
+import queue
+from pathlib import Path
+import os
+from contextlib import contextmanager
+
+import click
+import numpy as np
+import sounddevice as sd
+import sherpa_onnx as so
+
+
+@contextmanager
+def _chdir(path: Path):
+    """Temporarily change working dir so ONNX external weights resolve correctly."""
+    old = os.getcwd()
+    os.chdir(str(path))
+    try:
+        yield
+    finally:
+        os.chdir(old)
+
+
+def make_recognizer(
+    model_dir: Path, provider: str, num_threads: int
+) -> so.OfflineRecognizer:
+    enc = model_dir / "encoder.onnx"
+    dec = model_dir / "decoder.onnx"
+    joi = model_dir / "joiner.onnx"
+    tok = model_dir / "tokens.txt"
+    for p in (enc, dec, joi, tok):
+        if not p.is_file():
+            raise FileNotFoundError(f"Missing model file: {p}")
+
+    # cfg = so.OfflineRecognizerConfig(
+    #     model_config=so.OfflineModelConfig(
+    #         transducer=so.OfflineTransducerModelConfig(
+    #             encoder_filename=str(enc),
+    #             decoder_filename=str(dec),
+    #             joiner_filename=str(joi),
+    #         ),
+    #         tokens=str(tok),
+    #         provider=provider,
+    #         num_threads=num_threads,
+    #         model_type="nemo_transducer",
+    #     ),
+    #     decoding_method="greedy_search",
+    # )
+    # return so.OfflineRecognizer(cfg)
+    # NeMo Parakeet-TDT is a non-streaming transducer model
+    # return so.OfflineRecognizer.from_transducer(
+    #     tokens=str(tok),
+    #     encoder=str(enc),
+    #     decoder=str(dec),
+    #     joiner=str(joi),
+    #     provider=provider,
+    #     num_threads=num_threads,
+    #     decoding_method="greedy_search",
+    #     model_type="nemo_transducer",
+    # )
+    with _chdir(model_dir):
+        return so.OfflineRecognizer.from_transducer(
+            tokens=str(tok.name),  # absolute/relative both OK
+            encoder=str(enc.name),  # pass basenames while cwd=model_dir
+            decoder=str(dec.name),
+            joiner=str(joi.name),
+            provider=provider,
+            num_threads=num_threads,
+            decoding_method="greedy_search",
+            model_type="nemo_transducer",
+        )
+
+
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option(
+    "--model-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=Path("models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2"),
+    show_default=True,
+    help="Folder that contains encoder.onnx / decoder.onnx / joiner.onnx / tokens.txt",
+)
+@click.option(
+    "--device",
+    type=int,
+    default=None,
+    help="Input device id (use --list-devices to see ids)",
+)
+@click.option("--list-devices", is_flag=True, help="List audio devices and exit")
+@click.option(
+    "--sample-rate", type=int, default=16000, show_default=True, help="Mic sample rate"
+)
+@click.option(
+    "--silence-ms",
+    type=int,
+    default=800,
+    show_default=True,
+    help="Silence duration to trigger a decode",
+)
+@click.option(
+    "--min-speech-ms",
+    type=int,
+    default=300,
+    show_default=True,
+    help="Minimum speech length to decode",
+)
+@click.option(
+    "--energy-threshold",
+    type=float,
+    default=1e-4,
+    show_default=True,
+    help="Energy threshold for speech",
+)
+@click.option(
+    "--num-threads", type=int, default=2, show_default=True, help="ONNX Runtime threads"
+)
+@click.option(
+    "--provider",
+    type=click.Choice(["cpu", "cuda", "coreml"], case_sensitive=False),
+    default="cpu",
+    show_default=True,
+    help="Inference provider (must be available in your sherpa-onnx build)",
+)
+@click.option(
+    "--debug", is_flag=True, help="Print a simple audio meter while listening"
+)
+def cli(
+    model_dir: Path,
+    device: int | None,
+    list_devices: bool,
+    sample_rate: int,
+    silence_ms: int,
+    min_speech_ms: int,
+    energy_threshold: float,
+    num_threads: int,
+    provider: str,
+    debug: bool,
+):
+    """
+    Real-time STT from the microphone using sherpa-onnx NeMo Parakeet-TDT 0.6B v2.
+    Prints one line per spoken segment. Ctrl+C to exit.
+    """
+    if list_devices:
+        for i, d in enumerate(sd.query_devices()):
+            print(
+                f"{i:>3}: {d['name']}  ({d['max_input_channels']} in, {d['max_output_channels']} out)"
+            )
+        return
+
+    recognizer = make_recognizer(model_dir, provider, num_threads)
+
+    q: queue.Queue[np.ndarray] = queue.Queue()
+    chunk_ms = 100
+    frames_per_chunk = max(1, int(sample_rate * chunk_ms / 1000))
+    min_frames = int(min_speech_ms / chunk_ms)
+    silence_frames_needed = int(silence_ms / chunk_ms)
+
+    def on_audio(indata, frames, time, status):
+        if status:
+            print(status, file=sys.stderr)
+        # indata is float32 in [-1, 1], mono (we request channels=1)
+        q.put(indata.copy().reshape(-1))
+
+    print("Listening… (Ctrl+C to quit)")
+    buf: list[np.ndarray] = []
+    silent_frames = 0
+    speech_seen = False
+    chunks_since_meter = 0
+    try:
+        with sd.InputStream(
+            device=device,
+            channels=1,
+            samplerate=sample_rate,
+            dtype="float32",
+            blocksize=frames_per_chunk,
+            callback=on_audio,
+        ):
+            while True:
+                data = q.get()  # blocking read of the next 100 ms
+                buf.append(data)
+                # simple energy-based VAD
+                e = float(np.mean(np.square(data)))
+                if debug:
+                    chunks_since_meter += 1
+                    if chunks_since_meter >= int(1000 / chunk_ms):
+                        import math
+
+                        rms = math.sqrt(max(e, 1e-12))
+                        dbfs = 20 * math.log10(rms + 1e-12)
+                        print(f"\rlevel: {dbfs:6.1f} dBFS   ", end="", flush=True)
+                        chunks_since_meter = 0
+                if e > energy_threshold:
+                    silent_frames = 0
+                    speech_seen = True
+                # # simple energy-based VAD
+                # if float(np.mean(np.square(data))) > energy_threshold:
+                #     silent_frames = 0
+                else:
+                    silent_frames += 1
+
+                # endpoint: enough trailing silence and enough speech collected
+                if (
+                    speech_seen
+                    and silent_frames >= silence_frames_needed
+                    and len(buf) >= min_frames
+                ):
+                    # if silent_frames >= silence_frames_needed and len(buf) >= min_frames:
+                    samples = np.concatenate(buf).astype(np.float32)
+                    buf.clear()
+                    silent_frames = 0
+
+                    stream = recognizer.create_stream()
+                    stream.accept_waveform(sample_rate, samples)
+                    # for offline recognition, feed once then decode
+                    recognizer.decode_streams([stream])  # batch of one
+                    text = (stream.result.text or "").strip()
+                    if text:
+                        print("\n" + text) if debug else print(text)
+                        # print(text)
+                    speech_seen = False
+    except KeyboardInterrupt:
+        print("\nBye!")
+
+
+if __name__ == "__main__":
+    cli()
