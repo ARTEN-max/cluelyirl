@@ -169,7 +169,7 @@ def sound_vine_boom(ctx: RunContext[World]) -> Dict[str, Any]:
 @log_tool
 def sound_short_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
     """
-    This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.
+    This vibration should sound when the conversation gets dry for multiple turns to nudge them to ask more questions and re-engage into the conversation.
     """
     return _mk_candidate(
         ctx,
@@ -177,7 +177,7 @@ def sound_short_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
         tags=[],
         attrs={
             "scenarios": "This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.",
-            "intensity": "medium-high",
+            "intensity": "low-medium",
             "recommended_use": "subtle nudge",
         },
     )
