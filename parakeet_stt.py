@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import sys
 import queue
 from pathlib import Path
@@ -157,8 +158,6 @@ def cli(
                 if debug:
                     chunks_since_meter += 1
                     if chunks_since_meter >= int(1000 / chunk_ms):
-                        import math
-
                         rms = math.sqrt(max(e, 1e-12))
                         dbfs = 20 * math.log10(rms + 1e-12)
                         print(f"\rlevel: {dbfs:6.1f} dBFS   ", end="", flush=True)
