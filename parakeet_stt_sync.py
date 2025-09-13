@@ -197,7 +197,6 @@ def cli(
                             sounds_dir="sounds",
                             log=[],
                         )
-
                         world.log.append(
                             {
                                 "ts": _ts(),
@@ -211,6 +210,19 @@ def cli(
                             + transcript,
                             deps=world,
                         )
+                        sel = result.output
+                        # Try to resolve an absolute file path robustly:
+                        candidate_path = None
+                        if sel.selected_file and os.path.isabs(sel.selected_file):
+                            candidate_path = sel.selected_file
+                        elif sel.selected_file:
+                            candidate_path = os.path.abspath(
+                                os.path.join(world.sounds_dir, sel.selected_file)
+                            )
+                        elif sel.rel_path:
+                            candidate_path = os.path.abspath(
+                                os.path.join(world.sounds_dir, sel.rel_path)
+                            )
 
                         world.log.append(
                             {
@@ -225,6 +237,15 @@ def cli(
                         print(f"rationale: {result.output.rationale}")
                         print(f"confidence: {result.output.confidence}")
                         print(f"selected_sound: {result.output.selected_file}")
+                        # Fire-and-forget playback (5s with fade)
+                        if candidate_path and os.path.exists(candidate_path):
+                            try:
+                                player.play_5s_fade(candidate_path)
+                                print(f"Playing 5s with fade-out… (non-blocking)")
+                            except Exception as e:
+                                print(f"Could not play audio: {e}")
+                        else:
+                            print(f"Warning: selected file not found; skipped audio.")
 
                     speech_seen = False
     except KeyboardInterrupt:
