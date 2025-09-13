@@ -11,6 +11,89 @@ import numpy as np
 import sounddevice as sd
 import sherpa_onnx as so
 from agent_sounds import sound_agent, World, _ts
+from audio_player import AudioPlayer
+
+import concurrent.futures
+import itertools
+import traceback
+
+
+player = AudioPlayer(fade_out_sec=1.5)
+# Point this to your real sounds directory; no scanning is performed.
+world = World(
+    sounds_dir="sounds",
+    log=[],
+)
+
+# Use a small thread pool so agent runs don't block stdin
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+task_id_iter = itertools.count(1)
+
+
+def process_scenario(task_id: int, scenario: str):
+    try:
+        world.log.append(
+            {
+                "ts": _ts(),
+                "event": "user_request",
+                "scenario": scenario,
+                "task_id": task_id,
+            }
+        )
+        result = sound_agent.run_sync(scenario, deps=world)
+
+        sel = result.output
+        # Try to resolve an absolute file path robustly:
+        candidate_path = None
+        if sel.selected_file and os.path.isabs(sel.selected_file):
+            candidate_path = sel.selected_file
+        elif sel.selected_file:
+            candidate_path = os.path.abspath(
+                os.path.join(world.sounds_dir, sel.selected_file)
+            )
+        elif sel.rel_path:
+            candidate_path = os.path.abspath(
+                os.path.join(world.sounds_dir, sel.rel_path)
+            )
+
+        # Log + print the selection immediately
+        world.log.append(
+            {
+                "ts": _ts(),
+                "event": "agent_output",
+                "task_id": task_id,
+                "output": sel.model_dump(),
+            }
+        )
+        print(
+            f"\n[#{task_id}] Selected: {os.path.basename(candidate_path) if candidate_path else '(no file)'}"
+        )
+        # print(result.output.model_dump_json(indent=2))
+        print("\n---- Selection ----")
+        print(f"scenario:{result.output.scenario}")
+        print(f"rationale: {result.output.rationale}")
+        print(f"confidence: {result.output.confidence}")
+        print(f"selected_sound: {result.output.selected_file}")
+
+        # Fire-and-forget playback (5s with fade)
+        if candidate_path and os.path.exists(candidate_path):
+            try:
+                player.play_5s_fade(candidate_path)
+                print(f"[#{task_id}] Playing 5s with fade-out… (non-blocking)")
+            except Exception as e:
+                print(f"[#{task_id}] Could not play audio: {e}")
+        else:
+            print(f"[#{task_id}] Warning: selected file not found; skipped audio.")
+
+    except Exception as e:
+        print(f"[#{task_id}] Error while processing scenario: {e}")
+        traceback.print_exc()
+
+
+print(
+    "Type scenarios to test. New inputs are accepted immediately, even while the agent is working.\n"
+    "Type 'quit' to exit.\n"
+)
 
 
 @contextmanager
@@ -188,44 +271,41 @@ def cli(
                     text = (stream.result.text or "").strip()
                     if text:
                         print("\n" + text) if debug else print(text)
+
                         transcript += text + "\n"
-                        # Point this to your real sounds directory; no scanning is performed.
-                        world = World(
-                            sounds_dir="sounds",
-                            log=[],
-                        )
 
-                        world.log.append(
-                            {
-                                "ts": _ts(),
-                                "event": "user_request",
-                                "scenario": transcript,
-                            }
-                        )
+                        tid = next(task_id_iter)
+                        print(f"[#{tid}] Received. Working in background…")
+                        executor.submit(process_scenario, tid, transcript)
 
-                        result = sound_agent.run_sync(
-                            "Here is a newline delimited transcript of a conversation, the last line is what was most recently said, based on what just happened pick a suitable sound only if something notable happened recently"
-                            + transcript,
-                            deps=world,
-                        )
-
-                        world.log.append(
-                            {
-                                "ts": _ts(),
-                                "event": "agent_output",
-                                "output": result.output.model_dump(),
-                            }
-                        )
-
-                        print("\n---- Selection ----")
-                        print(f"scenario:{result.output.scenario}")
-                        print(f"rationale: {result.output.rationale}")
-                        print(f"confidence: {result.output.confidence}")
-                        print(f"selected_sound: {result.output.selected_file}")
+                        # world.log.append(
+                        #     {
+                        #         "ts": _ts(),
+                        #         "event": "user_request",
+                        #         "scenario": transcript,
+                        #     }
+                        # )
+                        #
+                        # result = sound_agent.run_sync(
+                        #     "Here is a newline delimited transcript of a conversation, the last line is what was most recently said, based on what just happened pick a suitable sound only if something notable happened recently"
+                        #     + transcript,
+                        #     deps=world,
+                        # )
+                        #
+                        # world.log.append(
+                        #     {
+                        #         "ts": _ts(),
+                        #         "event": "agent_output",
+                        #         "output": result.output.model_dump(),
+                        #     }
+                        # )
+                        #
 
                     speech_seen = False
     except KeyboardInterrupt:
         print(transcript)
+    finally:
+        executor.shutdown(wait=False)
 
 
 if __name__ == "__main__":

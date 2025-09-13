@@ -101,7 +101,7 @@ def _mk_candidate(
 # ---------- Agent ----------
 
 sound_agent = Agent(
-    "openai:gpt-4o",
+    "openai:gpt-4.1-nano-2025-04-14",
     deps_type=World,
     output_type=SoundSelection,
     system_prompt=(
