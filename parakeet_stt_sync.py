@@ -190,8 +190,9 @@ def cli(
                     recognizer.decode_streams([stream])  # batch of one
                     text = (stream.result.text or "").strip()
                     if text:
-                        print("\n" + text) if debug else print(text)
-                        transcript += text + "\n"
+                        line = " ".join([_ts(), text, "\n"])
+                        print(line)
+                        transcript += line
                         # Point this to your real sounds directory; no scanning is performed.
                         world = World(
                             sounds_dir="sounds",

@@ -38,7 +38,7 @@ class AudioPlayer:
 
     def _play_with_ffplay(self, file_path: str) -> None:
         # Play 5s (-t 5) and fade out during the last fade_out_sec seconds.
-        st = max(0.0, 5.0 - self.fade_out_sec)
+        st = max(0.0, 4.0 - self.fade_out_sec)
         args = [
             "ffplay",
             "-nodisp",

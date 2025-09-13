@@ -272,7 +272,7 @@ def cli(
                     if text:
                         print("\n" + text) if debug else print(text)
 
-                        transcript += text + "\n"
+                        transcript += " ".join(_ts(), text, "\n")
 
                         tid = next(task_id_iter)
                         print(f"[#{tid}] Received. Working in background…")
