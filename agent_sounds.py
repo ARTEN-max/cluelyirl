@@ -103,11 +103,11 @@ AGENT_SYSTEM_PROMPT = """You are a careful sound selector. Your PRIME DIRECTIVE 
 
 You will be provided with a transcript which is a conversation between two people where each segment is prepended with a timestamp of when they were talking. The last line with the latest timestamp is what was most recently said.
 
-ONLY if appropriate choose ONE audio file that best fits the user's scenario based on what was most recently said, using ONLY the curated sound tools provided (do NOT scan the filesystem and do NOT invent metadata). 
+ONLY if appropriate choose ONE audio file that best fits the user's scenario based on what was most recently said, using ONLY the curated sound tools provided and the provided description of the sound (do NOT scan the filesystem and do NOT invent metadata). The people in conversation may mention the sound itself, but you shouldn't play the sound unless they specifically demand to play the sound.
 
 Workflow:
-1) Analyze the conversation transcript provided.   If nothing notable happens, don't select any file—just return a short rationale.
-2) If a sound is warranted, call whichever curated sound tools seem relevant (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) to inspect their tags/notes.
+1) Analyze the conversation transcript provided. If nothing notable happens, don't select any file—just return a short rationale.
+2) If a sound is warranted, call whichever curated sound tools seem relevant (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme, sound_short_vibration, sound_short_vibration_double) to inspect their tags/notes.
 """
 
 sound_agent = Agent(
@@ -125,8 +125,7 @@ sound_agent = Agent(
 @log_tool
 def sound_cinematic_boom(ctx: RunContext[World]) -> Dict[str, Any]:
     """
-    Big cinematic impact suitable for dramatic reveals, trailer hits, boss entrances,
-    scene transitions, or 'fail/sudden stop' stingers.
+    For dramatic reveals similar to the vine-boom but more subtle for less intense scenarios.
     """
     return _mk_candidate(
         ctx,
@@ -141,7 +140,7 @@ def sound_cinematic_boom(ctx: RunContext[World]) -> Dict[str, Any]:
             "transition",
         ],
         attrs={
-            "scenarios": "Dramatic reveal, scene transition, boss entrance, trailer hit, game over sting.",
+            "scenarios": "Dramatic reveal",
             "intensity": "high",
             "recommended_use": "short punctuations rather than background.",
         },
@@ -152,7 +151,7 @@ def sound_cinematic_boom(ctx: RunContext[World]) -> Dict[str, Any]:
 @log_tool
 def sound_vine_boom(ctx: RunContext[World]) -> Dict[str, Any]:
     """
-    Iconic meme 'boom' for comedic punchlines, reaction moments, and meme edits. This fits best in scenarios where someone says something that is "out-of-pocket" or unexpected and causes the other person to not know how to react.
+    Iconic meme 'boom' for comedic punchlines, reaction moments, and meme edits. This fits best in scenarios where someone says something that is "out-of-pocket" or unexpected and causes the other person to not know how to react. It also works when one person makes a punchy remark about the other person.
     """
     return _mk_candidate(
         ctx,
@@ -168,10 +167,64 @@ def sound_vine_boom(ctx: RunContext[World]) -> Dict[str, Any]:
 
 @sound_agent.tool
 @log_tool
+def sound_short_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
+    """
+    This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.
+    """
+    return _mk_candidate(
+        ctx,
+        "short_vibration.m4a",
+        tags=[],
+        attrs={
+            "scenarios": "This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.",
+            "intensity": "medium-high",
+            "recommended_use": "subtle nudge",
+        },
+    )
+
+
+@sound_agent.tool
+@log_tool
+def sound_short_long_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
+    """
+    This sound should play when the people are having a heated conversation or an argument about something. This is a nudge to remind them to pause and take a step back to reflect. They might be touching on a sensitive topic.
+    """
+    return _mk_candidate(
+        ctx,
+        "short_vibration_double.m4a",
+        tags=[],
+        attrs={
+            "scenarios": "This sound should play when the people are having a heated conversation or an argument about something. This is a nudge to remind them to pause and take a step back to reflect.",
+            "intensity": "medium-high",
+            "recommended_use": "nudge to prevent conversation from getting heated",
+        },
+    )
+
+
+@sound_agent.tool
+@log_tool
+def sound_short_vibration_double(ctx: RunContext[World]) -> Dict[str, Any]:
+    """
+    This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.
+    """
+    return _mk_candidate(
+        ctx,
+        "short_vibration_double.m4a",
+        tags=[],
+        attrs={
+            "scenarios": "This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.",
+            "intensity": "medium-high",
+            "recommended_use": "subtle nudge",
+        },
+    )
+
+
+@sound_agent.tool
+@log_tool
 def sound_death_note_l_theme(ctx: RunContext[World]) -> Dict[str, Any]:
     """
     Tense, investigative background music (L's theme vibe): analytical, mysterious, and focused.
-    Good for deduction sequences, coding montages, stealth or crime board reveals.
+    Good for deduction sequences, coding montages, stealth or crime board reveals. This is good for moments where one of the people in conversation announce that they are going to lock in or if they are plotting/planning something.
     """
     return _mk_candidate(
         ctx,
