@@ -33,32 +33,6 @@ def make_recognizer(
         if not p.is_file():
             raise FileNotFoundError(f"Missing model file: {p}")
 
-    # cfg = so.OfflineRecognizerConfig(
-    #     model_config=so.OfflineModelConfig(
-    #         transducer=so.OfflineTransducerModelConfig(
-    #             encoder_filename=str(enc),
-    #             decoder_filename=str(dec),
-    #             joiner_filename=str(joi),
-    #         ),
-    #         tokens=str(tok),
-    #         provider=provider,
-    #         num_threads=num_threads,
-    #         model_type="nemo_transducer",
-    #     ),
-    #     decoding_method="greedy_search",
-    # )
-    # return so.OfflineRecognizer(cfg)
-    # NeMo Parakeet-TDT is a non-streaming transducer model
-    # return so.OfflineRecognizer.from_transducer(
-    #     tokens=str(tok),
-    #     encoder=str(enc),
-    #     decoder=str(dec),
-    #     joiner=str(joi),
-    #     provider=provider,
-    #     num_threads=num_threads,
-    #     decoding_method="greedy_search",
-    #     model_type="nemo_transducer",
-    # )
     with _chdir(model_dir):
         return so.OfflineRecognizer.from_transducer(
             tokens=str(tok.name),  # absolute/relative both OK
@@ -192,9 +166,6 @@ def cli(
                 if e > energy_threshold:
                     silent_frames = 0
                     speech_seen = True
-                # # simple energy-based VAD
-                # if float(np.mean(np.square(data))) > energy_threshold:
-                #     silent_frames = 0
                 else:
                     silent_frames += 1
 
@@ -216,7 +187,6 @@ def cli(
                     text = (stream.result.text or "").strip()
                     if text:
                         print("\n" + text) if debug else print(text)
-                        # print(text)
                     speech_seen = False
     except KeyboardInterrupt:
         print("\nBye!")
