@@ -238,6 +238,7 @@ def cli(
                         print(f"rationale: {result.output.rationale}")
                         print(f"confidence: {result.output.confidence}")
                         print(f"selected_sound: {result.output.selected_file}")
+                        print("----")
                         # Fire-and-forget playback (5s with fade)
                         if candidate_path and os.path.exists(candidate_path):
                             try:
