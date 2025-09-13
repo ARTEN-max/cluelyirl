@@ -106,8 +106,8 @@ You will be provided with a transcript which is a conversation between two peopl
 ONLY if appropriate choose ONE audio file that best fits the user's scenario based on what was most recently said, using ONLY the curated sound tools provided and the provided description of the sound (do NOT scan the filesystem and do NOT invent metadata). The people in conversation may mention the sound itself, but you shouldn't play the sound unless they specifically demand to play the sound.
 
 Workflow:
-1) Analyze the conversation transcript provided. If nothing notable happens, don't select any file—just return a short rationale.
-2) If a sound is warranted, call whichever curated sound tools seem relevant (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme, sound_short_vibration, sound_short_vibration_double) to inspect their tags/notes.
+1) Analyze the conversation transcript provided. If nothing notable happens for less than 3 consecutive turns, don't select any file—just return a short rationale.
+2) If a sound is warranted, call whichever curated sound tools seem relevant for key moments (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) or when the ovarall conversation is reaching a point that warrants a conversational cue (for example if the conversation has been dry for 3 or more turns use the sound_short_vibration. If the conversation gets heated in an argument, play sound_short_long_vibration) to inspect their tags/notes.
 """
 
 sound_agent = Agent(
@@ -201,22 +201,22 @@ def sound_short_long_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
     )
 
 
-@sound_agent.tool
-@log_tool
-def sound_short_vibration_double(ctx: RunContext[World]) -> Dict[str, Any]:
-    """
-    This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.
-    """
-    return _mk_candidate(
-        ctx,
-        "short_vibration_double.m4a",
-        tags=[],
-        attrs={
-            "scenarios": "This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.",
-            "intensity": "medium-high",
-            "recommended_use": "subtle nudge",
-        },
-    )
+# @sound_agent.tool
+# @log_tool
+# def sound_short_vibration_double(ctx: RunContext[World]) -> Dict[str, Any]:
+#     """
+#     This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.
+#     """
+#     return _mk_candidate(
+#         ctx,
+#         "short_vibration_double.m4a",
+#         tags=[],
+#         attrs={
+#             "scenarios": "This vibration should sound when the conversation gets dry to nudge them to ask more questions and re-engage into the conversation.",
+#             "intensity": "medium-high",
+#             "recommended_use": "subtle nudge",
+#         },
+#     )
 
 
 @sound_agent.tool
