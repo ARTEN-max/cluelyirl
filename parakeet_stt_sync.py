@@ -244,7 +244,7 @@ def cli(
                             try:
                                 player.play_5s_fade(candidate_path)
                                 transcript += " ".join(
-                                    _ts(), f"( {candidate_path} )", "\n"
+                                    [_ts(), f"( {candidate_path} )", "\n"]
                                 )
                                 print(f"Playing 5s with fade-out… (non-blocking)")
                             except Exception as e:
