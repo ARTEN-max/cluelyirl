@@ -186,7 +186,7 @@ def sound_cinematic_boom(ctx: RunContext[World]) -> Dict[str, Any]:
     """
     return _mk_candidate(
         ctx,
-        "cinematic_boom.m4a",
+        "short_cinematic_boom.m4a",
         tags=[
             "impact",
             "boom",
