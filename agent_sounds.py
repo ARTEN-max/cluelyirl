@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import json
-import math
 import functools
 from dataclasses import dataclass
 from datetime import datetime
@@ -105,23 +104,25 @@ sound_agent = Agent(
     deps_type=World,
     output_type=SoundSelection,
     system_prompt=(
-        "You are a careful sound selector. ONLY if appropriate choose ONE audio file that best fits the user's scenario, "
-        "using ONLY the curated sound tools provided (do NOT scan the filesystem and do NOT invent metadata).\n\n"
+        "You are a careful sound selector. ONLY if appropriate choose ONE audio file that best "
+        "fits the user's scenario, using ONLY the curated sound tools provided (do NOT scan the "
+        "filesystem and do NOT invent metadata).\n\n"
         "Workflow:\n"
-        "1) Analyze the conversation transcript provided where where the last line is what was most recently said. Only if something notable happens, look for a sound. Otherwise, don't select any file and just give a short rationale of what happened.\n"
-        "2) Call list_curated_sounds() to see all available options with tags and scenario notes.\n"
-        "3) If helpful, call find_curated_by_tag(tag) to narrow candidates.\n"
-        "4) Prefer files whose tags/attributes most closely match the scenario (mood, sfx type, 'impact', 'stinger', 'ambient').\n"
-        "5) If the scenario implies looping/background, prefer items tagged 'ambient','music','background'; "
-        "   for UI cues/alerts/punchlines, prefer short 'impact','stinger','boom' items.\n"
-        "6) If no exact match exists, select the closest fit and explain the trade-off.\n\n"
-        "Return SoundSelection with rationale, confidence (0-1), and alternatives_considered."
+        "1) Analyze the conversation transcript provided where the last line is the most recent input. "
+        "   If nothing notable happens, don't select any file—just return a short rationale.\n"
+        "2) If a sound is warranted, call whichever curated sound tools seem relevant "
+        "   (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) to inspect their tags/notes.\n"
+        "3) Prefer files whose tags/attributes most closely match the scenario (mood, sfx type like "
+        "   'impact','stinger','ambient'). If the scenario implies looping/background, prefer "
+        "   items tagged 'ambient','music','background'; for UI cues/alerts/punchlines, prefer short "
+        "   'impact','stinger','boom' items.\n"
+        "4) If no exact match exists, select the closest fit and explain the trade-off.\n\n"
+        "Return SoundSelection with rationale and confidence (0-1)."
     ),
 )
 
 
 # ---------- Curated sound tools ----------
-# Add new sounds by following the same pattern: define a tool function that returns _mk_candidate(...)
 
 
 @sound_agent.tool
@@ -195,29 +196,6 @@ def sound_death_note_l_theme(ctx: RunContext[World]) -> Dict[str, Any]:
             "recommended_use": "background underscore; may need manual looping.",
         },
     )
-
-
-# ---------- Aggregation / filtering tools over the curated set ----------
-
-
-@sound_agent.tool
-@log_tool
-def list_curated_sounds(ctx: RunContext[World]) -> List[Dict[str, Any]]:
-    """Return all curated sounds with their tags and scenario notes."""
-    # Call the individual tools to keep a single source of truth per sound:
-    return [
-        sound_cinematic_boom(ctx),
-        sound_vine_boom(ctx),
-        sound_death_note_l_theme(ctx),
-    ]
-
-
-@sound_agent.tool
-@log_tool
-def find_curated_by_tag(ctx: RunContext[World], tag: str) -> List[Dict[str, Any]]:
-    """Filter curated sounds by tag (case-insensitive exact tag match)."""
-    tag_norm = (tag or "").strip().lower()
-    return [it for it in list_curated_sounds(ctx) if tag_norm in it.get("tags", [])]
 
 
 # ---------- Example runner (you provide the scenario at runtime) ----------
