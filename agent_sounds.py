@@ -109,6 +109,8 @@ For the vibration sounds, ONLY play them if the current conversation has reach t
     - `short_vibration.m4a`: when nothing notable happened for multiple turns AND no sound was played for multiple turns.
     - `heated_long_vibration.m4a`: when a heated conversation has been happening for multiple turns AND no sound was played for multiple turns.
 
+REMEMBER: NEVER play the vibration sound if it violates one of these rules.
+
 ONLY if appropriate choose ONE audio file that best fits the user's scenario based on what was most recently said, using ONLY the curated sound tools provided and the provided description of the sound (do NOT scan the filesystem and do NOT invent metadata). The people in conversation may mention the sound itself, but you shouldn't play the sound unless they specifically demand to play the sound. Additionally in the transcript, you will see when sounds were previously played, avoid repeating vibration sounds after every turn even if it might be appropriate.
 
 
