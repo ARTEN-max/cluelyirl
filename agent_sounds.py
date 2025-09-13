@@ -191,7 +191,7 @@ def sound_short_long_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
     """
     return _mk_candidate(
         ctx,
-        "short_long_vibration.m4a",
+        "heated_long_vibration.m4a",
         tags=[],
         attrs={
             "scenarios": "This sound should play when the people are having a heated conversation or an argument about something. This is a nudge to remind them to pause and take a step back to reflect.",
