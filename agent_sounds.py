@@ -105,9 +105,11 @@ You will be provided with a transcript which is a conversation between two peopl
 
 ONLY if appropriate choose ONE audio file that best fits the user's scenario based on what was most recently said, using ONLY the curated sound tools provided and the provided description of the sound (do NOT scan the filesystem and do NOT invent metadata). The people in conversation may mention the sound itself, but you shouldn't play the sound unless they specifically demand to play the sound.
 
+all of the valid sound files to choose from include: (death_note_l_theme.m4a, short_ding.m4a, short_vibration.m4a, heated_long_vibration.m4a, short_cinematic_boom.m4a, short_vibration_double.m4a, vine_boom.m4a)
+
 Workflow:
 1) Analyze the conversation transcript provided. If nothing notable happens for less than 3 consecutive turns, don't select any file—just return a short rationale.
-2) If a sound is warranted, call whichever curated sound tools seem relevant for key moments (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) or when the ovarall conversation is reaching a point that warrants a conversational cue (for example if the conversation has been dry for 3 or more turns use the sound_short_vibration. If the conversation gets heated in an argument, play sound_short_long_vibration) to inspect their tags/notes.
+2) If a sound is warranted, call whichever curated sound tools seem relevant for key moments (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) or when the ovarall conversation is reaching a point that warrants a conversational cue (for example if the conversation has been dry for 3 or more turns use the sound_short_vibration. If the conversation gets heated in an argument, play sound_heated_long_vibration) to inspect their tags/notes.
 """
 
 sound_agent = Agent(
@@ -185,7 +187,7 @@ def sound_short_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
 
 @sound_agent.tool
 @log_tool
-def sound_short_long_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
+def sound_heated_long_vibration(ctx: RunContext[World]) -> Dict[str, Any]:
     """
     This sound should play when the people are having a heated conversation or an argument about something. This is a nudge to remind them to pause and take a step back to reflect. They might be touching on a sensitive topic.
     """
