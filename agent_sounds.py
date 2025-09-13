@@ -99,26 +99,22 @@ def _mk_candidate(
 
 # ---------- Agent ----------
 
+AGENT_SYSTEM_PROMPT = """You are a careful sound selector. Your PRIME DIRECTIVE is to AVOID playing any sound unless the moment is clearly warranted, safe, and context-appropriate.
+
+You will be provided with a transcript which is a conversation between two people where each segment is prepended with a timestamp of when they were talking. The last line with the latest timestamp is what was most recently said.
+
+ONLY if appropriate choose ONE audio file that best fits the user's scenario based on what was most recently said, using ONLY the curated sound tools provided (do NOT scan the filesystem and do NOT invent metadata). 
+
+Workflow:
+1) Analyze the conversation transcript provided.   If nothing notable happens, don't select any file—just return a short rationale.
+2) If a sound is warranted, call whichever curated sound tools seem relevant (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) to inspect their tags/notes.
+"""
+
 sound_agent = Agent(
     "openai:gpt-4.1-nano-2025-04-14",
     deps_type=World,
     output_type=SoundSelection,
-    system_prompt=(
-        "You are a careful sound selector. ONLY if appropriate choose ONE audio file that best "
-        "fits the user's scenario, using ONLY the curated sound tools provided (do NOT scan the "
-        "filesystem and do NOT invent metadata).\n\n"
-        "Workflow:\n"
-        "1) Analyze the conversation transcript provided where the last line is the most recent input. "
-        "   If nothing notable happens, don't select any file—just return a short rationale.\n"
-        "2) If a sound is warranted, call whichever curated sound tools seem relevant "
-        "   (e.g., sound_cinematic_boom, sound_vine_boom, sound_death_note_l_theme) to inspect their tags/notes.\n"
-        "3) Prefer files whose tags/attributes most closely match the scenario (mood, sfx type like "
-        "   'impact','stinger','ambient'). If the scenario implies looping/background, prefer "
-        "   items tagged 'ambient','music','background'; for UI cues/alerts/punchlines, prefer short "
-        "   'impact','stinger','boom' items.\n"
-        "4) If no exact match exists, select the closest fit and explain the trade-off.\n\n"
-        "Return SoundSelection with rationale and confidence (0-1)."
-    ),
+    system_prompt=AGENT_SYSTEM_PROMPT,
 )
 
 
@@ -156,8 +152,7 @@ def sound_cinematic_boom(ctx: RunContext[World]) -> Dict[str, Any]:
 @log_tool
 def sound_vine_boom(ctx: RunContext[World]) -> Dict[str, Any]:
     """
-    Iconic meme 'boom' for comedic punchlines, reaction moments, and meme edits.
-    Works great for short-form video, streams, and humorous overlays.
+    Iconic meme 'boom' for comedic punchlines, reaction moments, and meme edits. This fits best in scenarios where someone says something that is "out-of-pocket" or unexpected and causes the other person to not know how to react.
     """
     return _mk_candidate(
         ctx,
