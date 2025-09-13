@@ -10,6 +10,7 @@ import click
 import numpy as np
 import sounddevice as sd
 import sherpa_onnx as so
+from agent_sounds import sound_agent, World, _ts
 
 
 @contextmanager
@@ -141,6 +142,7 @@ def cli(
     silent_frames = 0
     speech_seen = False
     chunks_since_meter = 0
+    transcript = ""
     try:
         with sd.InputStream(
             device=device,
@@ -186,9 +188,44 @@ def cli(
                     text = (stream.result.text or "").strip()
                     if text:
                         print("\n" + text) if debug else print(text)
+                        transcript += text + "\n"
+                        # Point this to your real sounds directory; no scanning is performed.
+                        world = World(
+                            sounds_dir="sounds",
+                            log=[],
+                        )
+
+                        world.log.append(
+                            {
+                                "ts": _ts(),
+                                "event": "user_request",
+                                "scenario": transcript,
+                            }
+                        )
+
+                        result = sound_agent.run_sync(
+                            "Here is a newline delimited transcript of a conversation, the last line is what was most recently said, based on what just happened pick a suitable sound only if something notable happened recently"
+                            + transcript,
+                            deps=world,
+                        )
+
+                        world.log.append(
+                            {
+                                "ts": _ts(),
+                                "event": "agent_output",
+                                "output": result.output.model_dump(),
+                            }
+                        )
+
+                        print("\n---- Selection ----")
+                        print(f"scenario:{result.output.scenario}")
+                        print(f"rationale: {result.output.rationale}")
+                        print(f"confidence: {result.output.confidence}")
+                        print(f"selected_sound: {result.output.selected_file}")
+
                     speech_seen = False
     except KeyboardInterrupt:
-        print("\nBye!")
+        print(transcript)
 
 
 if __name__ == "__main__":
