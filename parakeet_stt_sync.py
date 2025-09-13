@@ -243,7 +243,9 @@ def cli(
                         if candidate_path and os.path.exists(candidate_path):
                             try:
                                 player.play_5s_fade(candidate_path)
-                                transcript += " ".join(_ts(), candidate_path, "\n")
+                                transcript += " ".join(
+                                    _ts(), f"( {candidate_path} )", "\n"
+                                )
                                 print(f"Playing 5s with fade-out… (non-blocking)")
                             except Exception as e:
                                 print(f"Could not play audio: {e}")
